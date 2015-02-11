@@ -27,7 +27,7 @@
  maxVal                        int                    Stores the maximum number the knob reaches.
  checkFirstNum, 
  checkSecondNum, 
- checkThirdNum              boolean                Stores 0 or 1 to see if the each number has been set.
+ checkThirdNum                 boolean                Stores 0 or 1 to see if the each number has been set.
  resetMaxVal                   boolean                Stores a value to see if the knob returned to 0. If so, reset the maxVal variable.
  startUpVal                    boolean                Stores a value to see if knob has been turned.
  
