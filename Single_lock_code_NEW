@@ -1,0 +1,128 @@
+int potentiometer = A0; 
+int potVal;
+
+int setPass [] = {
+  7, 3, 5};
+
+int maxVal = 0, currentNumSet = 0;
+
+boolean checkFirstNum = false, checkSecondNum = false, checkThirdNum = false; 
+boolean resetMaxVal = false;
+
+boolean startUpVal = false;
+
+void setup ()
+{
+  Serial.begin (9600);
+}
+
+void loop()
+{
+  readPotVal();
+  runComboLock();
+
+  checkLockUnlocked();
+  delay(500);
+}
+
+void readPotVal()
+{
+  potVal = analogRead(potentiometer); 
+  potVal = map(potVal, 0,1023,10,1);
+
+  Serial.print ("PotVal: ");
+  Serial.println (potVal);
+
+}
+void runComboLock()
+{
+  // Checks if the lock comparison has started
+  if ((potVal != 1) && (checkFirstNum == false ||checkSecondNum == false||checkThirdNum == false)){
+    startUpVal = true;
+
+    // if code from the latter if statements says to reset the maximum value...
+    if (resetMaxVal == true)
+    {
+      resetMaxVal = false;
+      maxVal = 0;
+    }
+
+    // Looks for the highest pot value
+    if (potVal > maxVal)
+      maxVal = potVal; 
+  }
+  else 
+  {
+    // if program has started to look for max num...
+    if (startUpVal == true){
+      // checks if the user has reset the values to 1. If so, it means user is trying to set the second number.
+      if (potVal == 1 && checkFirstNum == false)
+      {
+        // Checks if the first number is equivalent to the set password
+        if (maxVal == setPass[0])
+        {
+          checkFirstNum = true;  
+          resetMaxVal = true;
+          Serial.println ("SET PASS 1");
+        }
+        else
+        {
+          resetCombo();
+        }
+      }
+      else
+      {
+        if (potVal == 1 && checkSecondNum == false)
+        {
+          // Checks if the second number is equivalent to the set password
+          if (maxVal == setPass[1])
+          {
+            checkSecondNum = true;  
+            resetMaxVal = true;
+            maxVal = 0;
+            Serial.println ("SET PASS 2");
+          }
+          else
+          {
+            resetCombo();
+          }
+        }
+      }
+      startUpVal = false;
+    }
+  } 
+}
+
+
+void checkLockUnlocked()
+{
+  if (potVal == setPass[2] && checkSecondNum == true && checkThirdNum == false)
+  {
+    checkThirdNum = true;
+    Serial.println ("UNLOCKED");  
+  }
+
+  if (potVal != setPass[2] && checkSecondNum == true && checkThirdNum == true)
+  {
+    Serial.println ("LOCKED"); 
+  } 
+
+  if (potVal == 1 && checkSecondNum == true && checkThirdNum == true)
+  {
+    resetCombo(); 
+  } 
+}
+
+// Resets everything back to original state. 
+void resetCombo()
+{
+  maxVal = 0;
+  currentNumSet = 0;
+
+  checkFirstNum = false;
+  checkSecondNum = false;
+  checkThirdNum = false; 
+  resetMaxVal = false;
+  startUpVal = false;
+}
+
