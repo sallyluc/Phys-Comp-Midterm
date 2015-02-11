@@ -1,0 +1,1139 @@
+
+/*
+ Project Title: Physical Computing Midterm: Cipher Box
+ Student Name: Sally Luc
+ Course Code & Title: DIGF 2B03 Physical Computing
+ OCAD University
+ Created on Saturday February 7, 2015
+ 
+ Based on
+ Debounce, David A. Mellis, http://www.arduino.cc/en/Tutorial/Debounce
+ */
+
+/**************************************************************************************************************************************************
+ * VARIABLES
+ **************************************************************************************************************************************************/
+/*
+ Variable Dictionary - Combination Lock
+ 
+ Variable Name                 Type                   Description
+ potentiometer                 int                    Pin for potentiometer to get its values.
+ potVal                        int                    Stores the values retrieved from the potentiometer.
+ 
+ lockedLED                     int                    LED lights up when the combination lock is still locked.
+ unlockedLED                   int                    LED lights up when the combination lock is unlocked.
+ 
+ setPass                       array (int)            Stores the password vals.
+ maxVal                        int                    Stores the maximum number the knob reaches.
+ checkFirstNum, 
+ checkSecondNum, 
+ checkThirdNum              boolean                Stores 0 or 1 to see if the each number has been set.
+ resetMaxVal                   boolean                Stores a value to see if the knob returned to 0. If so, reset the maxVal variable.
+ startUpVal                    boolean                Stores a value to see if knob has been turned.
+ 
+ */
+
+#include <Servo.h>
+// Variable Declaration
+
+int potentiometer = A0; 
+int potVal;
+int lockedLED = 10, unlockedLED = 11;
+
+int setPass [] = {
+  7, 3, 5};
+
+int maxVal = 0;
+
+boolean checkFirstNum = false, checkSecondNum = false, checkThirdNum = false; 
+boolean resetMaxVal = false;
+
+boolean startUpVal = false;
+
+
+/*
+ Variable Dictionary - Tap Cipher
+ 
+ Variable Name                  Type                   Description
+ password                       int                    Stores password values.
+ buttonX, buttonY, submit       int                    Pins for the buttons in use. 
+ 
+ buttonStateX, buttonStateY
+ submitState                    int                    States of the buttons when clicked.
+ lastXState,lastYState                   
+ lastSumbitState                int                    Stores the last state the button was in.
+ 
+ clickedX, clickedY             int                    Counter for how many times the tap code for X and Y are pressed.
+ 
+ saveXCheck, saveYCheck         boolean                Boolean that is used to check if the opposing button is pressed in order to save the recent value from the button pressed.
+ 
+ save                           array(int)             Stores the values the user entered.
+ 
+ valCounter                     int                    Stores the counter of where the array is at the moment.
+ 
+ finalArraySize                 int                    Stores the size of the final array user entered.
+ 
+ correctPasswordCheck           boolean                Checks if the array is accurate to the password. 
+ 
+ level2G                        int                    Pin for green light that shines when the tap code is solved.
+ */
+
+int password [] = {
+  1,1,3,5,3,5,3,1,1,5,4,3}; //spells APPLES, code goes (x1, y1, x2, y2...xn, yn)
+
+int buttonX = 2, buttonY = 6, submit = 7;
+int buttonXState, buttonYState, lastXState, lastYState, submitState, lastSubmitState;
+
+int clickedX, clickedY; 
+
+boolean saveXCheck=false, saveYCheck = false;
+
+int save[100];
+int valCounter = 0;
+
+int finalArraySize;
+
+boolean correctPasswordCheck= false;
+
+int  level2G = 3;
+
+/*
+ Variable Dictionary - Polybius Square Cipher
+ 
+ Variable Name                 Type                   Description
+ password2                     int                    Stores password values.
+ button, clickedButton, 
+ submitButton                  int                    Pins for the buttons in use. 
+ 
+ buttonState, 
+ clickedButtonState,
+ submitState                   int                    States of the buttons when clicked.
+ 
+ lastButtonState,
+ lastClickedButtonState                   
+ lastSubmitButtonState         int                    Stores the last state the button was in.
+ 
+ clicked, clickedNext          int                    Counter for how many times button is pressed for the number of the code. clickedNext is for checking if a "submit" button is pressed after each number to store that value.
+ 
+ saveAll                       array(int)             Stores the values the user entered.
+ finalArray                    array(int)             Stores the values the user entered.
+ 
+ numCounter                    int                    Stores the counter of where the array is at the moment.
+ finalArraySizeCipher3         int                    Stores the size of the final array user entered.
+ correctPasswordCheck2         boolean                Checks if the array is accurate to the password.
+ 
+ level3G                      int                    Pin for green light that shines when the polybius code is solved.
+ */
+int password2 [] = {
+  2,1,3,3,5,3,1,5,5,4,0,0}; //HAPPY
+
+int button = 2, clickedButton = 6, submitButton = 7;
+int buttonState, clickedButtonState, lastButtonState, lastClickedButtonState, submitButtonState, lastSubmitButtonState;
+
+int clicked, clickedNext; 
+
+int saveAll[100], finalArray[100];
+int numCounter =0;
+
+int finalArraySizeCipher3;
+boolean correctPasswordCheck2 = false;
+
+int  level3G = 5;
+
+
+/*
+ Variable Dictionary - Set Combination code
+ 
+ Variable Name                 Type                   Description
+ setPotVal                     int                    Stores pot value.
+ setComboButton                int                    Pin to activate settings option when button is pressed.
+ lastSetState, setState        int                    Stores last state of the button and state to check number of times pressed.
+ maxVal1                       int                    Saves greatest pot value.
+ setFirstNum,setSecondNum,
+ setThirdNum                int                    Bool to check if the each number has been set yet.
+ resetMax1                     int                    Bool to check if maxVal should be resetted.
+ startUp                       int                    Sees if knob has started turning.
+ saveTapArray                  int                    Saves new tap array values.
+ numberTapCounter              int                    Stores a counter to set values into that array address for tap. 
+ numPolybiusCounter            int                    Stores a counter to set values into that array address for polybius square code.
+ */
+int setPotVal;
+int setComboButton = 4;
+int lastSetState, setState;
+int maxVal1 = 0;
+
+boolean setFirstNum = false, setSecondNum = false, setThirdNum = false; 
+boolean resetMax1 = false;
+
+boolean startUp = false;
+
+
+int saveTapArray[100];
+int numberTapCounter = 0;
+
+
+int numPolybiusCounter =0;
+
+/*
+ Variable Dictionary - Other Variables --> Shared amongst the three locks
+ 
+ Variable Name                 Type                   Description
+ servo                         Servo                  Pin that controls the servo motor of the lock for the cipher box.
+ unlockedMovementCount         int                    Counter to make the servoUnlock only on the value of one.
+ 
+ 
+ lastDebounceTime               long                   Checks the last time button was pressed.
+ debounceDelay                  long                   Stores the delay time for the button pressed.
+ 
+ noLevelSolved, level1NotSolved
+ level2NotSolved             boolean                Bool to see if each set of combination has been set yet.
+ setButtonPressed               int                    Stores a counter that increments in order to run next set of setting combos. Returns to 0 after polybius has been set.
+ */
+
+Servo servo;
+
+int pos =180;
+long lastDebounceTime = 0;
+long debounceDelay = 50;   
+
+
+boolean noLevelSolved =true, level1NotSolved=true, level2NotSolved=true;
+int setButtonPressed = 0;
+
+/**************************************************************************************************************************************************
+ * SETUP AND LOOP
+ **************************************************************************************************************************************************/
+// Declares the digital output pifns and calls Serial
+void setup ()
+{
+  pinMode (lockedLED, OUTPUT);
+  pinMode (buttonX, INPUT);
+  pinMode (buttonY, INPUT);
+  pinMode (button, INPUT);
+  pinMode (clickedButton, INPUT);
+
+  servo.attach (9);
+  servo.write(pos);
+  Serial.begin (9600);
+
+  analogWrite(unlockedLED, 0);
+  digitalWrite(lockedLED, HIGH);
+
+
+  analogWrite(level2G, 0);
+  analogWrite(level3G, 0);
+
+}
+
+// Loop - Runs the code repeatedly
+void loop ()
+{
+  // Runs the solving code part of the program
+  if (setButtonPressed ==0)
+  {
+    // reads pot values
+    readPotVal();
+    if (noLevelSolved == true)
+    {
+      runComboLock();
+    }
+    checkLockUnlocked();
+
+
+    // If statements to see which combination the player has to solve
+    if (noLevelSolved == false && level1NotSolved == true && level2NotSolved == true)
+    {
+      readXVal();
+      readYVal();
+      getFinalArraySize();
+    }
+
+    if (noLevelSolved == false && level1NotSolved == false && level2NotSolved == true) // part 3 of ciphers
+    {
+      readVal();
+      readClickedVal();
+      getFinalArraySizeFinalCipher(); 
+    }
+  }
+
+  //Runs set code if set button was pressed.
+  checkSetPressed();
+  shouldResetPasswords();
+}
+
+/**************************************************************************************************************************************************
+ * SERVO FUNCTION
+ **************************************************************************************************************************************************/
+// Unlocks the box
+void servoUnlock()
+{
+  if (pos==180)
+  {
+    for(int i = 180; i >= 90; i--)   
+    {                                  
+      servo.write(i);              
+      delay(15);                       
+    }
+    pos = 90; 
+  }
+}
+
+//Locks the box
+void servoLock()
+{
+  if (pos==90)
+  {
+    for(int i = 90; i <= 180; i++)   
+    {                                  
+      servo.write(i);              
+      delay(15);                       
+    } 
+    pos = 180;
+  }
+}
+
+
+/**************************************************************************************************************************************************
+ * COMBINATION LOCK FUNCTIONS
+ **************************************************************************************************************************************************/
+// Reads pot values
+void readPotVal()
+{
+  potVal = analogRead(potentiometer); 
+  potVal = map(potVal, 0,1023,1,10);
+}
+// Runs the combination lock code
+void runComboLock()
+{
+  Serial.print ("PotVal: ");
+  Serial.println (potVal);
+
+  //sets LEDS to red
+  if (potVal == 1){
+    analogWrite(unlockedLED, 0);
+    digitalWrite(lockedLED, HIGH);
+  }
+  // Checks if the lock comparison has started
+  if ((potVal != 1) && (checkFirstNum == false ||checkSecondNum == false||checkThirdNum == false)){
+
+    startUpVal = true;
+
+    // if code from the latter if statements says to reset the maximum value...
+    if (resetMaxVal == true)
+    {
+      resetMaxVal = false;
+      maxVal = 0;
+    }
+
+    // Looks for the highest pot value
+    if (potVal > maxVal)
+      maxVal = potVal; 
+  }
+  else 
+  {
+    // if program has started to look for max num...
+    if (startUpVal == true){
+      // checks if the user has reset the values to 1. If so, it means user is trying to set the second number.
+      if (potVal == 1 && checkFirstNum == false)
+      {
+        // Checks if the first number is equivalent to the set password
+        if (maxVal == setPass[0])
+        {
+          checkFirstNum = true;  
+          resetMaxVal = true;
+          Serial.println ("SET PASS 1");
+        }
+        else
+        {
+          resetCombo();
+        }
+      }
+      else
+      {
+        if (potVal == 1 && checkSecondNum == false)
+        {
+          // Checks if the second number is equivalent to the set password
+          if (maxVal == setPass[1])
+          {
+            checkSecondNum = true;  
+            resetMaxVal = true;
+            maxVal = 0;
+            Serial.println ("SET PASS 2");
+          }
+          else
+          {
+            resetCombo();
+          }
+        }
+      }
+      startUpVal = false;
+    }
+  } 
+}
+
+// Checks if the combination is accurate. Unlocks first part of the box if it is.
+void checkLockUnlocked()
+{
+  if (potVal == setPass[2] && checkSecondNum == true && checkThirdNum == false)
+  {
+    checkThirdNum = true;
+    noLevelSolved = false;
+    analogWrite(unlockedLED, 50);
+    digitalWrite(lockedLED, LOW);
+    Serial.println ("UNLOCKED");  
+  }
+
+  if (potVal != setPass[2] && checkSecondNum == true && checkThirdNum == true)
+  {
+    resetCombo(); 
+  }
+}
+
+// Resets everything back to original state. 
+void resetCombo()
+{
+  servoLock();
+  analogWrite(unlockedLED, 0);
+  analogWrite(level2G, 0);
+  analogWrite(level3G, 0);
+  digitalWrite(lockedLED, HIGH);
+
+  maxVal = 0;
+
+  checkFirstNum = false;
+  checkSecondNum = false;
+  checkThirdNum = false; 
+  resetMaxVal = false;
+  startUpVal = false;
+
+  noLevelSolved = true; 
+  level1NotSolved = true; 
+  level2NotSolved = true; 
+
+  resetTapCode();
+  resetPolybius();
+}
+
+/**************************************************************************************************************************************************
+ * TAP CIPHER CODE
+ **************************************************************************************************************************************************/
+//Reads and sets the x values of the tap code
+void readXVal()
+{
+  // Reads button input
+  int reading = digitalRead(buttonX);
+
+  // checks for noises or flicker
+  if (reading != lastXState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    //changes current state variable to state of button
+    if (reading != buttonXState) {
+      buttonXState = reading;
+
+      if (buttonXState == HIGH) {
+        // Reset the variables before it starts to read values/ reset the values.
+        if (correctPasswordCheck == true)
+        {
+          resetTapCode();
+        }
+
+        // enables ability to press the Y button after X is pressed. 
+        saveXCheck = true;
+        if (saveYCheck == true)
+        {
+          Serial.print("Y: ");
+          Serial.println (save[valCounter]); 
+          valCounter++;
+          saveYCheck = false;
+          clickedX = 0;
+        }
+
+        clickedX++; // Number of times button was pressed
+        if (clickedX >=6)
+          clickedX = 1;//resets the click counter after 5
+        save[valCounter] = clickedX;// Saves X values
+      }
+    }
+  }
+  lastXState = reading;
+}
+
+void readYVal() // Code similar to readXVal()
+{
+  if (clickedX !=0){
+    int reading = digitalRead(buttonY);
+
+    if (reading != lastYState) {
+      lastDebounceTime = millis();
+    } 
+
+    if ((millis() - lastDebounceTime) > debounceDelay) {
+      if (reading != buttonYState) {
+        buttonYState = reading;
+
+        if (buttonYState == HIGH) {
+          if (correctPasswordCheck == true)
+          {
+            resetTapCode();
+          }
+          saveYCheck = true;
+          if (saveXCheck == true)
+          {
+            Serial.print("X: ");
+            Serial.println (save[valCounter]);
+            valCounter++;
+            saveXCheck = false;
+            clickedY = 0;
+          }
+          if (valCounter !=0){
+            clickedY++;
+            if (clickedY >=6)
+              clickedY = 1;
+            save[valCounter] = clickedY; // Saves Y values
+          }
+        }
+      }
+    }
+    lastYState = reading;
+  }
+}
+
+// Determines the user input's array size after submit button was hit. Compares results.
+void getFinalArraySize()
+{         
+  if (clickedX != 0 && clickedY !=0){
+    int reading = digitalRead(submit);
+
+    if (reading != lastSubmitState) {
+      lastDebounceTime = millis();
+    } 
+
+    if ((millis() - lastDebounceTime) > debounceDelay) {
+      if (reading != submitState) {
+        submitState = reading;
+
+        if (submitState == HIGH) {
+          if (valCounter >=1){
+            //Finds the array size of user input
+            for (int i = 0; i < sizeof(save)/sizeof(int); i++)
+            {
+              if (save[i] !=0){
+                finalArraySize++;
+              }
+            }
+
+            while (finalArraySize <sizeof(password)/sizeof(int))
+            {
+              finalArraySize++;
+            }
+            Serial.print("Final Size: ");
+            Serial.println (finalArraySize);
+
+
+            compareResults();
+          }
+        }
+      }
+    }
+    lastSubmitState = reading;
+  }
+}
+// Compares the tap array user entered vs. the password. If password is accurate, it enables ability to solve Polybius code.
+void compareResults()
+{
+  for (int i = 0; i < finalArraySize; i++)
+  {
+    // Checks if answer is same as password. If not, breaks out of loop.
+    if (save[i] != password[i])
+    {
+      correctPasswordCheck = false; 
+      break;
+    }
+    //If answer is accurate in the end, allow passing.
+    if ((i == finalArraySize-1) && (save[i] == password[i]))
+    {
+      correctPasswordCheck = true; 
+    }
+  }
+
+  // Resets code if answer is wrong
+  if (correctPasswordCheck == false)
+  {
+    Serial.println("INCORRECT"); 
+    resetCombo();
+  }
+  // Allows user to start polybius code if accurate.
+  else{
+    Serial.println("CORRECT"); 
+    level1NotSolved =false;
+
+    analogWrite(level2G, 50);
+    delay (500);
+  }
+}
+
+// reset method for Tap code.
+void resetTapCode()
+{
+  clickedX = 0;
+  clickedY = 0; 
+
+  saveXCheck=false;
+  saveYCheck = false;
+
+  for (int i = 0; i < finalArraySize; i++)
+  {
+    save[i] = 0; 
+  }
+
+  valCounter = 0;
+  finalArraySize = 0;
+  correctPasswordCheck= false; 
+
+}
+/**************************************************************************************************************************************************
+ * POLYBIUS SQUARE CIPHER
+ **************************************************************************************************************************************************/
+//Reads the number of times button was pressed.
+void readVal()
+{
+  int reading = digitalRead(button);
+
+
+  if (reading != lastButtonState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != buttonState) {
+      buttonState = reading;
+      // Counts the amount of times button was pressed. Resets to 1 if button is over 5.
+      if (buttonState == HIGH) {
+
+        clicked++;
+        if (clicked >=6)
+          clicked = 1;
+      }
+    }
+  }
+  lastButtonState = reading;
+}
+
+// Checks when submit button per number is pressed.
+void readClickedVal()
+{
+  int reading = digitalRead(clickedButton);
+
+  if (reading != lastClickedButtonState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != clickedButtonState) {
+      clickedButtonState = reading;
+
+      //Checks if user pressed button to set number to array. If it does, clicked var is saved to array.
+      if (clickedButtonState == HIGH) {
+        saveAll[numCounter] = clicked;
+        Serial.print ("X vals: ");
+        Serial.println (saveAll[numCounter]);
+        numCounter++;
+        clicked=0;
+      }
+    }
+  }
+  lastClickedButtonState = reading;  
+}
+
+// Submits array and checks for the final length of the array user set. 
+
+void getFinalArraySizeFinalCipher()
+{
+  int reading = digitalRead(submitButton);
+
+  if (reading != lastSubmitButtonState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != submitButtonState) {
+      submitButtonState = reading;
+
+      if (submitButtonState == HIGH) {
+
+        for (int i = 0; i < sizeof(saveAll)/sizeof(int); i++)
+        {
+          if (saveAll[i] !=0){
+            finalArraySizeCipher3++;
+          }
+        }
+
+        for (int i = 0; i < finalArraySizeCipher3; i++)
+        {
+          finalArray[i] = saveAll[i];
+        }
+
+        while(finalArraySizeCipher3< sizeof(password2)/sizeof(int))
+        {
+          finalArraySizeCipher3++;
+        }
+        Serial.print ("Ray Size: ");
+        Serial.println (finalArraySizeCipher3);
+
+        compareResultsCipher3();
+      }
+    }
+  }
+  lastSubmitButtonState = reading;
+}
+
+// Compares results and password
+void compareResultsCipher3()
+{
+
+  for (int i = 0; i < finalArraySizeCipher3; i++)
+  {
+    Serial.println (finalArray[i]);
+    if (finalArray[i] != password2[i])
+    {
+      correctPasswordCheck2 = false; 
+      break;
+    }
+
+    if ((i == finalArraySizeCipher3-1) && (finalArray[i] == password2[i]))
+    {
+      correctPasswordCheck2 = true; 
+    }
+  }
+
+  if (correctPasswordCheck2 == false)
+  {
+    Serial.println("INCORRECT"); 
+    resetCombo();
+  }
+  else
+  {
+    Serial.println("CORRECT");
+    analogWrite(level3G, 50);
+    servoUnlock();
+  } 
+}
+
+// Resets Polybius variables
+void resetPolybius()
+{
+  clicked = 0; 
+  clickedNext =0; 
+
+  for (int i = 0; i < finalArraySizeCipher3; i++)
+  {
+    saveAll[i] = 0; 
+    finalArray[i] = 0;
+  }
+
+  numCounter =0;
+
+  finalArraySizeCipher3 = 0;
+  correctPasswordCheck2 = false;
+}
+/**************************************************************************************************************************************************
+ * SET COMBINATIONS
+ **************************************************************************************************************************************************/
+//----------COMBO CODE-------------------------------------------------------------------------------------------------------------------------------
+// resets the vars
+void resetResetVars ()
+{
+  setPotVal;
+  maxVal1 = 0;
+
+  setFirstNum = false;
+  setSecondNum = false;
+  setThirdNum = false; 
+  resetMax1 = false;
+
+  for (int i = 0; i < sizeof(saveTapArray)/sizeof(int); i++)
+  {
+    saveTapArray[i] = 0;
+  }
+  numberTapCounter = 0;
+  numPolybiusCounter =0; 
+}
+
+// checks which method to run for resetting the combinations
+void shouldResetPasswords ()
+{
+  if (setButtonPressed ==1)
+  {
+    setCombinations(); 
+  }
+  else if (setButtonPressed ==2)
+  {
+    setTapPassword();
+  }
+  else
+  {
+    if (setButtonPressed ==3)
+      setPolybiusPassword();
+  }
+}
+
+//checks if the button was pressed to set passwords
+void checkSetPressed()
+{
+  int reading = digitalRead(setComboButton);
+
+  if (reading != lastSetState) {
+
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+
+    if (reading != setState) {
+      setState = reading;
+
+      if (setState == HIGH) {
+        digitalWrite(lockedLED,HIGH);
+        analogWrite(unlockedLED,LOW);
+        analogWrite(level2G,LOW);
+        analogWrite(level3G,LOW);
+        setButtonPressed ++;
+        resetResetVars();
+      }
+    }
+  }
+
+  //digitalWrite(ledPin, ledState);
+  lastSetState = reading; 
+}
+
+// Reads pot values and sets combinations
+void setCombinations()
+{
+  setPotVal = analogRead(potentiometer); 
+  setPotVal = map(setPotVal, 0,1023,1,10);
+
+  // Checks if knob is turned
+  if ((setPotVal != 1) && (setFirstNum == false ||setSecondNum == false||setThirdNum == false)){
+    startUp = true;
+
+    if (resetMax1 == true)
+    {
+      resetMax1 = false;
+      maxVal1 = 0;
+    }
+
+    if (setPotVal > maxVal1)
+      maxVal1 = setPotVal; 
+
+  }
+  else 
+  {
+    // Sets the max val to each number after each time knob returns to 0
+    if (startUp == true){
+      if (setPotVal == 1 && setFirstNum == false)
+      {
+        setPass[0] = maxVal1; 
+        setFirstNum = true;  
+        resetMax1 = true;
+      }
+      else if (setPotVal == 1 && setSecondNum == false)
+      {
+        setPass[1] = maxVal1; 
+        setSecondNum = true;  
+        resetMax1 = true;
+      }
+      else{ 
+        if (setPotVal == 1 && setThirdNum == false)
+        {
+          setPass[2] = maxVal1; 
+          setThirdNum = true;  
+          resetMax1 = true;
+          setButtonPressed ++;
+          analogWrite (unlockedLED,50);
+        }
+      }
+
+      startUp = false;
+    }
+  }
+
+  Serial.print ("PotVal: ");
+  Serial.println (setPotVal);
+
+  Serial.print ("SetPass1: ");
+  Serial.println (setPass[0]);
+  Serial.print ("SetPass2: ");
+  Serial.println (setPass[1]);
+  Serial.print ("SetPass3: ");
+  Serial.println (setPass[2]);
+
+  delay(500); 
+}
+
+
+
+//----------TAP CODE-------------------------------------------------------------------------------------------------------------------------------
+
+
+// resets password to all 0s
+void resetTapPassword()
+{
+  for (int i = 0; i < sizeof(password)/sizeof(int); i++)
+  {
+    password [i] = 0; 
+  }
+}
+// Reads the set y values for tap code.
+void readSetXVal()
+{
+  int reading = digitalRead(buttonX);
+
+  if (reading != lastXState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != buttonXState) {
+      buttonXState = reading;
+
+      if (buttonXState == HIGH) {
+        // sets limit to amount of coordinates code intakes. 
+        if (numberTapCounter <=11)
+        {
+          saveXCheck = true;
+          // Counter increment
+          if (saveYCheck == true)
+          {  
+
+            Serial.print("Y: ");
+            Serial.println (saveTapArray[numberTapCounter]);
+
+            numberTapCounter++;
+            saveYCheck = false;
+            clickedX = 0;
+          }
+
+          // Number of times button was pressed for x coordinate.
+          clickedX++;
+
+          if (clickedX >=6)
+            clickedX = 1;
+          saveTapArray[numberTapCounter] = clickedX;
+        }
+      }
+      else
+      {
+
+      }
+    }
+  }
+  lastXState = reading;
+}
+
+// Reads the set y values for tap code.
+void readSetYVal()
+{
+  int reading = digitalRead(buttonY);
+
+  if (reading != lastYState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != buttonYState) {
+      buttonYState = reading;
+
+      if (buttonYState == HIGH) {
+        if (numberTapCounter <=10)
+        {
+          saveYCheck = true;
+          if (saveXCheck == true)
+          {
+            Serial.print("X: ");
+            Serial.println (saveTapArray[numberTapCounter]);
+            numberTapCounter++;
+            saveXCheck = false;
+            clickedY = 0;
+          }
+
+          if (numberTapCounter !=0){
+            clickedY++;
+            if (clickedY >=6)
+              clickedY = 1;
+            saveTapArray[numberTapCounter] = clickedY;
+          }
+        }
+      }
+    }
+  }
+  lastYState = reading;
+}
+
+// Change values for tap array
+void changeFinalTapArray()
+{
+  int reading = digitalRead(submit);
+
+  if (reading != lastSubmitState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != submitState) {
+      submitState = reading;
+
+      if (submitState == HIGH) {
+        if (numberTapCounter % 2 ==1)
+        {
+          if (numberTapCounter >=1){
+            resetTapPassword();
+
+            //ensures that the new password array is the same as the size of previous password
+            while (numberTapCounter <sizeof(password)/sizeof(int))
+            {
+              numberTapCounter++;
+              saveTapArray[numberTapCounter]=0;
+            }
+
+            // sets password
+            for (int i = 0; i < sizeof(password)/sizeof(int); i++)
+            {
+              password[i] = saveTapArray[i];
+              Serial.print("password: ");
+              Serial.println(password[i]);
+            }      
+            setButtonPressed++;
+            analogWrite (level2G,50);
+          }
+        }
+      }
+    }
+  }
+  lastSubmitState = reading;
+}
+
+// Runs methods for tap reset.
+void setTapPassword()
+{
+  readSetXVal();
+  readSetYVal();
+  changeFinalTapArray(); 
+}
+
+//----------POLYBIUS CODE--------------------------------------------------------------------------------------------------------------------------
+
+// Resets polybius password array to 0.
+void resetPolybiusPassword()
+{
+  for (int i = 0; i < sizeof(password2)/sizeof(int); i++)
+  {
+    password2 [i] = 0; 
+  }
+}
+
+// Reads and sets Polybius values.
+void readSetPolybiusVal()
+{
+  int reading = digitalRead(button);
+
+  if (reading != lastButtonState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != buttonState) {
+      buttonState = reading;
+
+      if (buttonState == HIGH) {
+        // Sets limit to how many numbers can be stored. Increment taps per turn. 
+        if (numPolybiusCounter <=11)
+        {
+          clicked++;
+
+          if (clicked >=6)
+            clicked = 1;
+
+          Serial.println (clicked);
+        }
+      }
+    }
+  }
+  lastButtonState = reading;
+}
+
+// Saves each value of the polybius code. 
+void readSavePolybiusVal()
+{
+  int reading = digitalRead(clickedButton);
+
+  if (reading != lastClickedButtonState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != clickedButtonState) {
+      clickedButtonState = reading;
+
+      if (clickedButtonState == HIGH) {
+        if (clicked >0){
+
+          // Sets limit to how many sets of coordinates can be set. Current is 6. Saves each value. 
+          if (numPolybiusCounter <=11)
+          {
+            saveAll[numPolybiusCounter] = clicked;
+            Serial.print ("saveAll: ");
+            Serial.println (saveAll[numPolybiusCounter]);
+
+            numPolybiusCounter++;
+            clicked = 0;
+          }
+        }
+
+      }
+    }
+  }
+  lastClickedButtonState = reading;
+}
+
+// Saves the set Polybius array
+void changeFinalPolybiusArray()
+{
+  int reading = digitalRead(submitButton);
+
+  if (reading != lastSubmitButtonState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != submitButtonState) {
+      submitButtonState = reading;
+
+      if (submitButtonState == HIGH) {
+        resetPolybiusPassword();
+        // Saves password values. Overwrites default
+        for (int i = 0; i < sizeof(password2)/sizeof(int); i++)
+        {
+          password2[i] = saveAll[i];
+          Serial.println(password2[i]);
+          setButtonPressed = 0;
+          analogWrite (level3G,50);
+          delay (50);
+          resetCombo();
+        }      
+      }
+    }
+  }
+  lastSubmitButtonState = reading;
+}
+
+// Runs the methods to set polybius password
+void setPolybiusPassword()
+{
+  readSetPolybiusVal();
+  readSavePolybiusVal();
+  changeFinalPolybiusArray();
+}
