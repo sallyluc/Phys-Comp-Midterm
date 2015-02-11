@@ -1,0 +1,170 @@
+
+int password [] = {
+  1,1,3,5,3,5,3,1,1,5,4,3}; //APPLES
+
+int buttonX = 2, buttonY = 6, submit = 7;
+int buttonXState, buttonYState, lastXState, lastYState, submitState, lastSubmitState;
+
+int clickedX, clickedY; 
+
+boolean saveXCheck=false, saveYCheck = false;
+
+int save[100];//, saveY[] = {};
+int valCounter = 0;
+
+int finalArraySize;
+
+long lastDebounceTime = 0;  // the last time the output pin was toggled
+long debounceDelay = 50;    // the debounce time; increase if the output flickers
+
+void setup()
+{
+  pinMode (buttonX, INPUT);
+  pinMode (buttonY, INPUT);
+  Serial.begin(9600);
+}
+
+void loop ()
+{
+  readXVal();
+  readYVal();
+  getFinalArraySize();
+}
+
+void readXVal()
+{
+  int reading = digitalRead(buttonX);
+
+  if (reading != lastXState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != buttonXState) {
+      buttonXState = reading;
+
+      if (buttonXState == HIGH) {
+        saveXCheck = true;
+
+        if (saveYCheck == true)
+        {     
+
+          Serial.print("Y: ");
+          Serial.println (save[valCounter]);
+
+          valCounter++;
+          saveYCheck = false;
+          clickedX = 0;
+        }
+
+        clickedX++;
+
+        if (clickedX >=6)
+          clickedX = 1;
+        save[valCounter] = clickedX;
+      }
+    }
+  }
+  lastXState = reading;
+}
+
+void readYVal()
+{
+  int reading = digitalRead(buttonY);
+
+  if (reading != lastYState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != buttonYState) {
+      buttonYState = reading;
+
+      if (buttonYState == HIGH) {
+
+        saveYCheck = true;
+        if (saveXCheck == true)
+        {
+          Serial.print("X: ");
+          Serial.println (save[valCounter]);
+          valCounter++;
+          saveXCheck = false;
+          clickedY = 0;
+        }
+
+        clickedY++;
+        if (clickedY >=6)
+          clickedY = 1;
+        save[valCounter] = clickedY;
+      }
+    }
+  }
+  lastYState = reading;
+}
+
+
+void getFinalArraySize()
+{
+  int reading = digitalRead(submit);
+
+  if (reading != lastSubmitState) {
+    lastDebounceTime = millis();
+  } 
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != submitState) {
+      submitState = reading;
+
+      if (submitState == HIGH) {
+
+        for (int i = 0; i < sizeof(save)/sizeof(int); i++)
+        {
+          if (save[i] !=0){
+            finalArraySize++;
+          }
+        }
+        Serial.print("Final Size: ");
+        Serial.println (finalArraySize);
+        //        Serial.print("Final Size: ");
+        //        Serial.println (sizeof(password)/sizeof(int));
+
+        compareResults();
+      }
+    }
+  }
+  lastSubmitState = reading;
+}
+
+boolean correctPasswordCheck= false;
+
+void compareResults()
+{
+  if (finalArraySize == sizeof(password)/sizeof(int))
+  {
+    Serial.println ("SAME SIZE BRO");
+    for (int i = 0; i < finalArraySize; i++)
+    {
+      if (save[i] != password[i])
+      {
+        correctPasswordCheck = false; 
+        break;
+      }
+
+      if ((i == finalArraySize-1) && (save[i] == password[i]))
+      {
+        correctPasswordCheck = true; 
+      }
+    }
+
+    if (correctPasswordCheck == false)
+    {
+      Serial.println("INCORRECT"); 
+    }
+    else
+      Serial.println("CORRECT"); 
+
+  }
+}
+//----------------------------------------------------------------------------------------------------------------------------------------
+
+
